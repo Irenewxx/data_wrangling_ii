@@ -1,0 +1,151 @@
+---
+title: "reading_data_from_the_web"
+output: html_document
+date: "2026-10-15"
+---
+
+
+```{r}
+library(tidyverse)
+library(rvest)
+library(httr)
+library(chromote)
+```
+
+
+
+##Import NSDUH
+從URL去讀你需要的檔案，你需要提前知道你自己要哪些資料！
+```{r}
+url = "https://www.samhsa.gov/data/sites/default/files/NSDUHsaeShortTermCHG2015/NSDUHsaeShortTermCHG2015.htm"
+drug_use_html = read_html(url)
+
+drug_use_html
+```
+
+
+##Pull the tables out
+ slice(-1) 用來扣掉第一行
+```{r}
+marj_df = 
+  drug_use_html |> 
+  html_table() |> 
+  first() |>
+  slice(-1) 
+
+marj_df
+```
+
+
+
+##Import some star wars data
+pull in the html
+你用read html，只能讀html上面的，但只是“讀”
+```{r}
+swm_html = 
+  read_html_live("https://www.imdb.com/list/ls070150896/")
+swm_html
+```
+
+
+Next, selector gadget 這裡報錯，沒跟到lol
+1.要先確定電腦有chrome，老師有說要有chrome才會成功
+2.要確定r上面也能run chrome的環境喔
+```{r}
+library(rvest)
+
+swm_title_vec =
+  swm_html |>
+  html_elements(".ipc-title-link-wrapper .ipc-title__text") |>
+  html_text()
+
+swm_title_vec
+
+swm_metascore_vec =
+  swm_html |>
+  html_elements(".metacritic-score-box") |>
+  html_text()
+
+swm_metascore_vec
+
+swm_runtime_vec =
+  swm_html |>
+  html_elements(".base .ipc-inline-list__item:nth-child(2)") |>
+  html_text()
+
+swm_runtime_vec
+
+length(swm_title_vec)
+length(swm_metascore_vec)
+length(swm_runtime_vec)
+
+swm_df =
+  tibble(
+    title = swm_title_vec,
+    score = swm_metascore_vec,
+    runtime = swm_runtime_vec
+  )
+
+swm_df
+```
+
+
+```{r}
+test_local =
+  minimal_html(
+    "<html><body><h1>R test successful</h1></body></html>"
+  )
+
+test_local |>
+  html_elements("h1") |>
+  html_text()
+```
+
+
+
+
+
+##Use APIs
+getting a CSV
+  content("parsed") 如果是CSV，就提取出來，或者用類似的方式（？）
+```{r}
+nyc_water_df = 
+  GET("https://data.cityofnewyork.us/api/v3/views/ia2d-e54m/query.csv") |> 
+  content("parsed") |> 
+  select(year:per_capita_gallons_per_person_per_day)
+nyc_water_df
+```
+
+
+
+get a json file
+這裡報錯了？
+```{r}
+nyc_water_json =
+  GET("https://data.cityofnewyork.us/api/v3/views/ia2d-e54m/query.json")
+
+nyc_water_json |>
+  content("text") |>
+  jsonlite::fromJSON() |>
+  as_tibble() |>
+  select(year:per_capita_gallons_per_person_per_day)
+nyc_water_json
+```
+
+
+
+Look at some pokemon!
+```{r}
+pokemon_json = 
+  GET("https://pokeapi.co/api/v2/pokemon/1") 
+  
+  
+pokemon_data= 
+  pokemon_json |> 
+  content()
+
+pokemon_data[["name"]]
+pokemon_data[["height"]]
+pokemon_data[["abilities"]]
+```
+
